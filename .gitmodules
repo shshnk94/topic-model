@@ -1,0 +1,9 @@
+[submodule "prodlda"]
+	path = prodlda
+	url = https://github.com/shshnk94/prodlda.git
+[submodule "nvdm"]
+	path = nvdm
+	url = https://github.com/shshnk94/nvdm.git
+[submodule "etm"]
+	path = etm
+	url = https://github.com/shshnk94/etm.git
