@@ -63,9 +63,10 @@ del cvectorizer
 # Split in train/test/valid
 print('tokenizing documents and splitting into train/test/valid...')
 num_docs_tr = len(init_docs_tr)
-vaSize = 50#int(valid_split_percent * num_docs_tr)
-trSize = 200#num_docs_tr - vaSize
-tsSize = 50#len(init_docs_ts)
+vaSize = int(valid_split_percent * num_docs_tr)
+trSize = num_docs_tr - vaSize
+tsSize = len(init_docs_ts)
+
 #idx_permute = np.random.permutation(num_docs_tr).astype(int)
 idx_permute = np.arange(num_docs_tr)
 
@@ -79,6 +80,7 @@ print('vocabulary after removing words not in train: {}'.format(len(vocab)))
 docs_tr = [[word2id[w] for w in init_docs[idx_permute[idx_d]].split() if w in word2id] for idx_d in range(trSize)]
 docs_va = [[word2id[w] for w in init_docs[idx_permute[idx_d+trSize]].split() if w in word2id] for idx_d in range(vaSize)]
 docs_ts = [[word2id[w] for w in init_docs[idx_d+num_docs_tr].split() if w in word2id] for idx_d in range(tsSize)]
+
 print('number of documents (train): {} [this should be equal to {}]'.format(len(docs_tr), trSize))
 print('number of documents (test): {} [this should be equal to {}]'.format(len(docs_ts), tsSize))
 print('number of documents (valid): {} [this should be equal to {}]'.format(len(docs_va), vaSize))
@@ -97,9 +99,11 @@ docs_va = remove_empty(docs_va)
 docs_ts = [doc for doc in docs_ts if len(doc)>1]
 
 # Split test set in 2 halves
-print('splitting test documents in 2 halves...')
+print('splitting test and validation documents in 2 halves...')
 docs_ts_h1 = [[w for i,w in enumerate(doc) if i<=len(doc)/2.0-1] for doc in docs_ts]
 docs_ts_h2 = [[w for i,w in enumerate(doc) if i>len(doc)/2.0-1] for doc in docs_ts]
+docs_va_h1 = [[w for i,w in enumerate(doc) if i<=len(doc)/2.0-1] for doc in docs_va]
+docs_va_h2 = [[w for i,w in enumerate(doc) if i>len(doc)/2.0-1] for doc in docs_va]
 
 # Get doc indices
 print('getting doc indices...')
@@ -111,18 +115,21 @@ def create_doc_indices(in_docs):
 doc_indices_tr = create_doc_indices(docs_tr)
 doc_indices_ts_h1 = create_doc_indices(docs_ts_h1)
 doc_indices_ts_h2 = create_doc_indices(docs_ts_h2)
-doc_indices_va = create_doc_indices(docs_va)
+doc_indices_va_h1 = create_doc_indices(docs_va_h1)
+doc_indices_va_h2 = create_doc_indices(docs_va_h2)
 
 print('len(np.unique(doc_indices_tr)): {} [this should be {}]'.format(len(np.unique(doc_indices_tr)), len(docs_tr)))
 print('len(np.unique(doc_indices_ts_h1)): {} [this should be {}]'.format(len(np.unique(doc_indices_ts_h1)), len(docs_ts_h1)))
 print('len(np.unique(doc_indices_ts_h2)): {} [this should be {}]'.format(len(np.unique(doc_indices_ts_h2)), len(docs_ts_h2)))
-print('len(np.unique(doc_indices_va)): {} [this should be {}]'.format(len(np.unique(doc_indices_va)), len(docs_va)))
+print('len(np.unique(doc_indices_va_h1)): {} [this should be {}]'.format(len(np.unique(doc_indices_va_h1)), len(docs_va_h1)))
+print('len(np.unique(doc_indices_va_h2)): {} [this should be {}]'.format(len(np.unique(doc_indices_va_h2)), len(docs_va_h2)))
 
 # Number of documents in each set
 n_docs_tr = len(docs_tr)
 n_docs_ts_h1 = len(docs_ts_h1)
 n_docs_ts_h2 = len(docs_ts_h2)
-n_docs_va = len(docs_va)
+n_docs_va_h1 = len(docs_va_h1)
+n_docs_va_h2 = len(docs_va_h2)
 
 # Create bow representation
 print('creating bow representation...')
@@ -137,17 +144,20 @@ def create_bow(doc_indices, words, n_docs, vocab_size):
 bow_tr = create_bow(doc_indices_tr, create_list_words(docs_tr), n_docs_tr, len(vocab))
 bow_ts_h1 = create_bow(doc_indices_ts_h1, create_list_words(docs_ts_h1), n_docs_ts_h1, len(vocab))
 bow_ts_h2 = create_bow(doc_indices_ts_h2, create_list_words(docs_ts_h2), n_docs_ts_h2, len(vocab))
-bow_va = create_bow(doc_indices_va, create_list_words(docs_va), n_docs_va, len(vocab))
+bow_va_h1 = create_bow(doc_indices_va_h1, create_list_words(docs_va_h1), n_docs_va_h1, len(vocab))
+bow_va_h2 = create_bow(doc_indices_va_h2, create_list_words(docs_va_h2), n_docs_va_h2, len(vocab))
 
 # Remove unused variables
 del docs_tr
 del docs_ts_h1
 del docs_ts_h2
-del docs_va
+del docs_va_h1
+del docs_va_h2
 del doc_indices_tr
 del doc_indices_ts_h1
 del doc_indices_ts_h2
-del doc_indices_va
+del doc_indices_va_h1
+del doc_indices_va_h2
 
 # Save vocabulary to file
 with open(path_save + 'vocab.new', 'wb') as f:
@@ -161,6 +171,7 @@ def save(matrix, name):
 save(bow_tr, 'train')
 save(bow_ts_h1, 'test_h1')
 save(bow_ts_h2, 'test_h2')
-save(bow_va, 'valid')
+save(bow_va_h1, 'valid_h1')
+save(bow_va_h2, 'valid_h2')
 
 print('Data ready !!')
