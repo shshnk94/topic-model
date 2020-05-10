@@ -96,6 +96,11 @@ docs_va = remove_empty(docs_va)
 # Remove test documents with length=1
 docs_ts = [doc for doc in docs_ts if len(doc)>1]
 
+# Split test set in 2 halves
+print('splitting test documents in 2 halves...')
+docs_ts_h1 = [[w for i,w in enumerate(doc) if i<=len(doc)/2.0-1] for doc in docs_ts]
+docs_ts_h2 = [[w for i,w in enumerate(doc) if i>len(doc)/2.0-1] for doc in docs_ts]
+
 # Get doc indices
 print('getting doc indices...')
 
@@ -104,16 +109,19 @@ def create_doc_indices(in_docs):
     return [int(x) for y in aux for x in y]
 
 doc_indices_tr = create_doc_indices(docs_tr)
-doc_indices_ts = create_doc_indices(docs_ts)
+doc_indices_ts_h1 = create_doc_indices(docs_ts_h1)
+doc_indices_ts_h2 = create_doc_indices(docs_ts_h2)
 doc_indices_va = create_doc_indices(docs_va)
 
 print('len(np.unique(doc_indices_tr)): {} [this should be {}]'.format(len(np.unique(doc_indices_tr)), len(docs_tr)))
-print('len(np.unique(doc_indices_ts)): {} [this should be {}]'.format(len(np.unique(doc_indices_ts)), len(docs_ts)))
+print('len(np.unique(doc_indices_ts_h1)): {} [this should be {}]'.format(len(np.unique(doc_indices_ts_h1)), len(docs_ts_h1)))
+print('len(np.unique(doc_indices_ts_h2)): {} [this should be {}]'.format(len(np.unique(doc_indices_ts_h2)), len(docs_ts_h2)))
 print('len(np.unique(doc_indices_va)): {} [this should be {}]'.format(len(np.unique(doc_indices_va)), len(docs_va)))
 
 # Number of documents in each set
 n_docs_tr = len(docs_tr)
-n_docs_ts = len(docs_ts)
+n_docs_ts_h1 = len(docs_ts_h1)
+n_docs_ts_h2 = len(docs_ts_h2)
 n_docs_va = len(docs_va)
 
 # Create bow representation
@@ -127,28 +135,32 @@ def create_bow(doc_indices, words, n_docs, vocab_size):
     return [[(y, doc[x, y]) for x, y in zip(doc.nonzero()[0], doc.nonzero()[1])] for doc in matrix]
 
 bow_tr = create_bow(doc_indices_tr, create_list_words(docs_tr), n_docs_tr, len(vocab))
-bow_ts = create_bow(doc_indices_ts, create_list_words(docs_ts), n_docs_ts, len(vocab))
+bow_ts_h1 = create_bow(doc_indices_ts_h1, create_list_words(docs_ts_h1), n_docs_ts_h1, len(vocab))
+bow_ts_h2 = create_bow(doc_indices_ts_h2, create_list_words(docs_ts_h2), n_docs_ts_h2, len(vocab))
 bow_va = create_bow(doc_indices_va, create_list_words(docs_va), n_docs_va, len(vocab))
 
 # Remove unused variables
 del docs_tr
-del docs_ts
+del docs_ts_h1
+del docs_ts_h2
 del docs_va
 del doc_indices_tr
-del doc_indices_ts
+del doc_indices_ts_h1
+del doc_indices_ts_h2
 del doc_indices_va
 
 # Save vocabulary to file
-with open('vocab.new', 'wb') as f:
+with open(path_save + 'vocab.new', 'wb') as f:
     pickle.dump(vocab, f)
 del vocab
 
 def save(matrix, name):
-    with open(name + '.pkl', 'wb') as f:
+    with open(path_save + name + '.pkl', 'wb') as f:
         pickle.dump(matrix, f)
 
 save(bow_tr, 'train')
-save(bow_ts, 'test')
+save(bow_ts_h1, 'test_h1')
+save(bow_ts_h2, 'test_h2')
 save(bow_va, 'valid')
 
 print('Data ready !!')
