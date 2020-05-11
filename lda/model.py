@@ -30,16 +30,22 @@ def train(data, valid_h1, valid_h2, vocab):
     model = LdaModel(id2word=vocab,
                      num_topics=args.topics, 
                      random_state=0,
-                     chunksize=64,
+                     chunksize=args.batch_size,
                      alpha='auto',
                      per_word_topics=True)
+    
+    best_perplexity = float('inf') 
 
-    for batch in data_loader(data, args.batch_size):
-        model.update(batch, decay=0.5, offset=1, passes=1, update_every=1, gamma_threshold=0.001, chunks_as_numpy=True)
+    for epoch in range(args.epochs):
+        
+        print("Epoch number", epoch, end=' ')
+        for batch in data_loader(data, args.batch_size):
+            model.update(batch, decay=0.5, offset=1, passes=1, update_every=0, gamma_threshold=0.001, chunks_as_numpy=True)
 
-        evaluate(data, valid_h1, valid_h2, model, 'valid')
-
-    return model
+        val_perplexity = evaluate(data, valid_h1, valid_h2, model, 'valid')
+        if val_perplexity < best_perplexity:
+            best_perplexity = val_perplexity
+            model.save(args.save_path + 'model.ckpt')
 
 def evaluate(train_set, test_h1, test_h2, model, step):
 
@@ -56,10 +62,6 @@ def evaluate(train_set, test_h1, test_h2, model, step):
     beta = np.array(beta)
     train_set = [np.expand_dims(np.array([word for word, count in doc if count != 0]), axis=0) for doc in train_set]
     
-    if step == 'test':
-        get_topic_coherence(beta, train_set, 'lda')
-        get_topic_diversity(beta, 'lda')
- 
     theta = np.zeros((len(test_h1), args.topics))
     distribution = model.get_document_topics(test_h1, minimum_probability=0.0)
     for index, doc in enumerate(distribution):
@@ -73,9 +75,13 @@ def evaluate(train_set, test_h1, test_h2, model, step):
         for word, count in doc:
             test[index, word] = count
 
-    get_perplexity(test, theta, beta)
+    perplexity = get_perplexity(test, theta, beta)
 
-    return
+    if step == 'test':
+        coherence = get_topic_coherence(beta, train_set, 'lda')
+        diversity = get_topic_diversity(beta, 'lda')
+
+    return perplexity
 
 #Load training set and vocabulary
 with open(args.data_path + 'train.pkl', 'rb') as f:
@@ -99,4 +105,5 @@ with open(args.data_path + 'test_h1.pkl', 'rb') as f:
 with open(args.data_path + 'test_h2.pkl', 'rb') as f:
     test_h2 = pkl.load(f)
 
-#evaluate(train_set, test_h1, test_h2, model, 'test')
+model = LdaModel.load(args.save_path + 'model.ckpt', mmap='r')
+evaluate(train_set, test_h1, test_h2, model, 'test')
