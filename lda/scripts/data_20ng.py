@@ -16,7 +16,7 @@ valid_split_percent = float(sys.argv[2])
 
 # Maximum / minimum document frequency
 max_df = 0.7
-min_df = 10  # choose desired value for min_df
+min_df = 100  # choose desired value for min_df
 
 # Read stopwords
 with open('stops.txt', 'r') as f:
@@ -36,6 +36,15 @@ def contains_punctuation(w):
 def contains_numeric(w):
     return any(char.isdigit() for char in w)
     
+# Remove documents with length less than 10 and greater than 95th percentile.
+def remove_outlier(docs):
+    lengths = np.array([len(doc) for doc in docs])
+    docs = [docs[i] for i in np.where((lengths > 10) & (lengths < np.percentile(lengths, 95)))[0]]
+
+    return docs
+
+#init_docs_tr = remove_outlier(init_docs_tr)
+#init_docs_ts = remove_outlier(init_docs_ts)
 init_docs = init_docs_tr + init_docs_ts
 
 # Removes all words with any punctuation or digits in them.

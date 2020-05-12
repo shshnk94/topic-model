@@ -3,6 +3,7 @@ from gensim.models import LdaModel
 import sys
 import pickle as pkl
 import numpy as np
+import logging
 
 from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
@@ -10,7 +11,6 @@ from metrics import get_topic_coherence, get_topic_diversity, get_perplexity
 
 parser = argparse.ArgumentParser(description='Latent Dirichlet Allocation')
 
-#parser.add_argument('--mode', type=str, help='mode of the call - train/eval/test')
 parser.add_argument('--epochs', type=int, help='number of training epochs')
 parser.add_argument('--batch_size', type=int, help='Batch size per training/test iteration')
 parser.add_argument('--topics', type=int, help='number of topics to be trained on')
@@ -19,14 +19,17 @@ parser.add_argument('--save_path', type=str, help='checkpoint path (if any)')
 
 args = parser.parse_args()
 
+"""
 def data_loader(data, batch_size):
 
     indices = np.random.permutation(np.arange(len(data)))
     for base in range(0, indices.shape[0], batch_size):
         yield [data[i] for i in indices[base: min(base + batch_size, indices.shape[0])]]
+"""
 
 def train(data, valid_h1, valid_h2, vocab):
-
+    
+    logging.basicConfig(filename=args.save_path + 'lda.log', format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     model = LdaModel(id2word=vocab,
                      num_topics=args.topics, 
                      random_state=0,
@@ -39,8 +42,8 @@ def train(data, valid_h1, valid_h2, vocab):
     for epoch in range(args.epochs):
         
         print("Epoch number", epoch, end=' ')
-        for batch in data_loader(data, args.batch_size):
-            model.update(batch, decay=0.5, offset=1, passes=1, update_every=0, gamma_threshold=0.001, chunks_as_numpy=True)
+        #for batch in data_loader(data, args.batch_size):
+        model.update(data, decay=0.5, offset=1, passes=1, update_every=0, eval_every=1, gamma_threshold=0.001, chunks_as_numpy=True)
 
         val_perplexity = evaluate(data, valid_h1, valid_h2, model, 'valid')
         if val_perplexity < best_perplexity:
@@ -105,5 +108,6 @@ with open(args.data_path + 'test_h1.pkl', 'rb') as f:
 with open(args.data_path + 'test_h2.pkl', 'rb') as f:
     test_h2 = pkl.load(f)
 
+print("Evaluation on the test set")
 model = LdaModel.load(args.save_path + 'model.ckpt', mmap='r')
 evaluate(train_set, test_h1, test_h2, model, 'test')

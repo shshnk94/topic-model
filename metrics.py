@@ -89,7 +89,7 @@ def get_topic_coherence(beta, data, model):
     return TC
 
 def get_perplexity(corpus, theta, beta):
-    
+
     num_words = corpus.sum(axis=1)
     probabilites = np.log(np.dot(theta, beta))
     perplexity = np.exp(-(probabilites * corpus).sum() / num_words.sum())
