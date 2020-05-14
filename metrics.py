@@ -1,10 +1,8 @@
 import numpy as np
-from scipy.special import softmax
 from sklearn.metrics import pairwise_distances
 
 def get_topic_diversity(beta, model):
 
-    beta = softmax(beta, axis=1) if model not in ['etm', 'lda'] else beta
     logits = pairwise_distances(beta, metric='cosine')
     TD = logits[np.triu_indices(logits.shape[0], k = 1)].mean()
     print('Topic diveristy is: {}'.format(TD))
@@ -50,8 +48,6 @@ def get_document_frequency(data, wi, wj=None, model='etm'):
     return D_wj, D_wi_wj 
 
 def get_topic_coherence(beta, data, model):
-
-    beta = softmax(beta, axis=1) if model not in ['etm', 'lda'] else beta
 
     D = len(data)
     TC = []

@@ -41,20 +41,20 @@ def train(data, valid_h1, valid_h2, vocab):
 
     for epoch in range(args.epochs):
         
-        print("Epoch number", epoch, end=' ')
         #for batch in data_loader(data, args.batch_size):
         model.update(data, decay=0.5, offset=1, passes=1, update_every=0, eval_every=1, gamma_threshold=0.001, chunks_as_numpy=True)
+        print("Epoch number " + str(epoch) + " and gensim ppl is " + str(model.log_perplexity(valid_h1)))
 
         val_perplexity = evaluate(data, valid_h1, valid_h2, model, 'valid')
         if val_perplexity < best_perplexity:
             best_perplexity = val_perplexity
-            model.save(args.save_path + 'model.ckpt')
+            model.save(args.save_path + 'model_' + str(args.topics) + '_' + str(args.epochs) + '.ckpt')
 
 def evaluate(train_set, test_h1, test_h2, model, step):
 
     beta = []
-    distribution = model.show_topics(num_topics=args.topics, num_words=len(vocab), formatted=False)
 
+    distribution = model.show_topics(num_topics=args.topics, num_words=len(vocab), formatted=False)
     with open(args.save_path + 'topics.txt', 'w') as f:
         for topic in distribution:
 
@@ -63,9 +63,8 @@ def evaluate(train_set, test_h1, test_h2, model, step):
             beta.append([y for x, y in sorted_words])
 
     beta = np.array(beta)
-    train_set = [np.expand_dims(np.array([word for word, count in doc if count != 0]), axis=0) for doc in train_set]
-    
     theta = np.zeros((len(test_h1), args.topics))
+
     distribution = model.get_document_topics(test_h1, minimum_probability=0.0)
     for index, doc in enumerate(distribution):
         for topic, proportion in doc:
@@ -81,6 +80,8 @@ def evaluate(train_set, test_h1, test_h2, model, step):
     perplexity = get_perplexity(test, theta, beta)
 
     if step == 'test':
+
+        train_set = [np.expand_dims(np.array([word for word, count in doc if count != 0]), axis=0) for doc in train_set]
         coherence = get_topic_coherence(beta, train_set, 'lda')
         diversity = get_topic_diversity(beta, 'lda')
 
@@ -109,5 +110,5 @@ with open(args.data_path + 'test_h2.pkl', 'rb') as f:
     test_h2 = pkl.load(f)
 
 print("Evaluation on the test set")
-model = LdaModel.load(args.save_path + 'model.ckpt', mmap='r')
+model = LdaModel.load(args.save_path + 'model_' + str(args.topics) + '_' + str(args.epochs) + '.ckpt', mmap='r')
 evaluate(train_set, test_h1, test_h2, model, 'test')
