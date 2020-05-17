@@ -3,7 +3,7 @@ from gensim.models import LdaModel
 import sys
 import pickle as pkl
 import numpy as np
-import logging
+#import logging
 
 from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
@@ -19,17 +19,9 @@ parser.add_argument('--save_path', type=str, help='checkpoint path (if any)')
 
 args = parser.parse_args()
 
-"""
-def data_loader(data, batch_size):
-
-    indices = np.random.permutation(np.arange(len(data)))
-    for base in range(0, indices.shape[0], batch_size):
-        yield [data[i] for i in indices[base: min(base + batch_size, indices.shape[0])]]
-"""
-
 def train(data, valid_h1, valid_h2, vocab):
     
-    logging.basicConfig(filename=args.save_path + 'lda.log', format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    #logging.basicConfig(filename=args.save_path + 'lda.log', format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     model = LdaModel(id2word=vocab,
                      num_topics=args.topics, 
                      random_state=0,
@@ -41,7 +33,6 @@ def train(data, valid_h1, valid_h2, vocab):
 
     for epoch in range(args.epochs):
         
-        #for batch in data_loader(data, args.batch_size):
         model.update(data, decay=0.5, offset=1, passes=1, update_every=0, eval_every=1, gamma_threshold=0.001, chunks_as_numpy=True)
         print("Epoch number " + str(epoch) + " and gensim ppl is " + str(model.log_perplexity(valid_h1)))
 
@@ -52,17 +43,6 @@ def train(data, valid_h1, valid_h2, vocab):
 
 def evaluate(train_set, test_h1, test_h2, model, step):
 
-    beta = []
-
-    distribution = model.show_topics(num_topics=args.topics, num_words=len(vocab), formatted=False)
-    with open(args.save_path + 'topics.txt', 'w') as f:
-        for topic in distribution:
-
-            sorted_words = sorted(topic[1], key=lambda x: float(x[1]))
-            f.write(' '.join([x for x, y in sorted_words[:10]]) + '\n')
-            beta.append([y for x, y in sorted_words])
-
-    beta = np.array(beta)
     theta = np.zeros((len(test_h1), args.topics))
 
     distribution = model.get_document_topics(test_h1, minimum_probability=0.0)
@@ -70,6 +50,7 @@ def evaluate(train_set, test_h1, test_h2, model, step):
         for topic, proportion in doc:
             theta[index, topic] = proportion 
 
+    beta = model.get_topics()
     theta = np.array(theta)
 
     test = np.zeros((len(test_h2), beta.shape[1]))
@@ -80,6 +61,13 @@ def evaluate(train_set, test_h1, test_h2, model, step):
     perplexity = get_perplexity(test, theta, beta)
 
     if step == 'test':
+
+        distribution = model.show_topics(num_topics=args.topics, num_words=len(vocab), formatted=False)
+        with open(args.save_path + 'topics.txt', 'w') as f:
+            for topic in distribution:
+
+                sorted_words = sorted(topic[1], key=lambda x: float(x[1]))
+                f.write(' '.join([x for x, y in sorted_words[:10]]) + '\n')
 
         train_set = [np.expand_dims(np.array([word for word, count in doc if count != 0]), axis=0) for doc in train_set]
         coherence = get_topic_coherence(beta, train_set, 'lda')

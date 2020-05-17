@@ -68,7 +68,6 @@ def get_topic_coherence(beta, data, model):
             while j < len(top_10) and j > i:
 
                 D_wj, D_wi_wj = get_document_frequency(data, word, top_10[j], model=model)
-                #f_wi_wj = np.log(D_wi_wj + 1) - np.log(D_wi)
                 f_wi_wj = (np.log(D_wi_wj + 1) + np.log(D) - np.log(D_wi) - np.log(D_wj)) / (np.log(D) - np.log(D_wi_wj + 1))
 
                 tmp += f_wi_wj
