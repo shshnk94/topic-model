@@ -69,9 +69,34 @@ def evaluate(train_set, test_h1, test_h2, model, step):
                 sorted_words = sorted(topic[1], key=lambda x: float(x[1]))
                 f.write(' '.join([x for x, y in sorted_words[:10]]) + '\n')
 
-        train_set = [np.expand_dims(np.array([word for word, count in doc if count != 0]), axis=0) for doc in train_set]
-        coherence = get_topic_coherence(beta, train_set, 'lda')
+        transformed_set = [np.expand_dims(np.array([word for word, count in doc if count != 0]), axis=0) for doc in train_set]
+        coherence = get_topic_coherence(beta, transformed_set, 'lda')
         diversity = get_topic_diversity(beta, 'lda')
+        
+        thetaWeightedAvg = np.zeros((1, args.topics))
+        cnt = 0
+
+        for base in range(0, len(train_set), args.batch_size):
+
+            data_batch = train_set[base: min(base + args.batch_size, len(train_set))]
+            sums = np.array([sum([count for word, count in doc]) for doc in data_batch])
+            cnt += sums.sum(axis=0)
+
+            theta = np.zeros((len(data_batch), args.topics))
+            distribution = model.get_document_topics(data_batch, minimum_probability=0.0)
+            for index, doc in enumerate(distribution):
+                for topic, proportion in doc:
+                    theta[index, topic] = proportion 
+
+            weighed_theta = (theta.T * sums).T
+            thetaWeightedAvg += np.expand_dims(weighed_theta.sum(axis=0), axis=0)
+
+        thetaWeightedAvg = thetaWeightedAvg.squeeze() / cnt
+        print('\nThe 10 most used topics are {}'.format(thetaWeightedAvg.argsort()[::-1][:10]))
+
+        #Get top words in the topic
+        for number, topic in model.show_topics(args.topics, 10, formatted=True):
+            print([terms.split('*')[1].strip().strip('"') for terms in topic.split('+')])
 
     return perplexity
 
